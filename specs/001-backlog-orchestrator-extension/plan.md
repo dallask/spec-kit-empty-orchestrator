@@ -52,7 +52,7 @@ The implementation is deliberately small in surface area: one Skill (the Lead pl
 - All persisted state MUST be JSON; the state file MUST be safe to inspect with `jq` while the Lead is running (atomic-replace semantics).
 - All YAML config keys MUST have documented defaults; missing-key MUST never crash the Lead.
 - **Observability** (deferred from spec): the Lead MUST emit a one-line **status event** to stdout (and append to `.specify/extensions/orchestrate/events.log`) on every `phase` or `status` transition. Format: `[ISO8601] feature=<id> phase=<phase> status=<status> note=<short>`. No fancy dashboard in v1.
-- **Security / Privacy** (deferred from spec): the state file MAY contain user-typed clarification answers verbatim. The state file MUST be created with mode `0600`; the state directory MUST be gitignored. Documented in `quickstart.md`. No redaction in v1; users with sensitive content are warned in the README to keep `BACKLOG.md` non-secret.
+- **Security / Privacy** (deferred from spec): the state file AND the events log MAY contain user-typed clarification answers verbatim. **Both** MUST be created with mode `0600`; the runtime subtree (`state.json`, `events.log`, `lock`, `worktrees/`) MUST be gitignored. Documented in `quickstart.md`. No redaction in v1; users with sensitive content are warned in the README to keep `BACKLOG.md` non-secret.
 - **Subagent timeout** (deferred from spec): no hard timeout in v1. The user retains the Ctrl-C / kill-session escape hatch; the next `/speckit-orchestrate` invocation resumes from the persisted state. Adding a configurable per-phase timeout is explicitly out of scope and documented as a future enhancement.
 
 **Scale/Scope**:
