@@ -38,7 +38,7 @@
 
 - Q1 → Backlog parsing format = single-line top-level checkboxes (`- [ ] Title — description`).
 - Q2 → Per-feature state model = two orthogonal fields `phase ∈ {ba, dev, merge, done}` × `status ∈ {queued, running, blocked, failed, complete}`.
-- Q3 → Merge strategy = `git merge --squash` + single Conventional-Commits commit; feature branch retained.
+- Q3 → Merge strategy = configurable `merge.strategy: squash | merge | rebase`, default `squash`; all strategies emit Conventional-Commits-compliant commits on the target; feature branches retained.  *(Revised in same session — initially squash-only.)*
 - Q4 → Default parallelism = `ba: 2, dev: 2`.
 - Q5 → Dirty-tree behaviour = configurable `safety.on_dirty_tree: refuse | stash | ignore`, defaulting to `refuse`.
 
