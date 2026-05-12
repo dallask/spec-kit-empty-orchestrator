@@ -31,8 +31,15 @@
 
 ## Notes
 
-- Reasonable defaults documented in the Assumptions section rather than left as `[NEEDS CLARIFICATION]` markers. Re-validate during `/speckit-clarify` if any assumption needs to be promoted to an explicit decision.
-- Two assumptions are most likely to deserve revisiting in `/speckit-clarify`:
-  1. Backlog parsing convention (top-level headings + top-level checkboxes vs a stricter format).
-  2. Merge strategy on the dev branch (non-fast-forward vs squash vs rebase) — affects how semantic-release sees commits.
+- Initial spec used Assumptions instead of `[NEEDS CLARIFICATION]` markers; `/speckit-clarify` session on 2026-05-12 promoted 5 of those defaults to explicit decisions (see `## Clarifications` in spec.md).
 - "Mandatory" sections per the template (User Scenarios & Testing, Requirements, Success Criteria) are all populated. Optional sections (Key Entities, Dependencies) are included because the feature has a data model and external dependencies.
+
+## Clarify session 2026-05-12
+
+- Q1 → Backlog parsing format = single-line top-level checkboxes (`- [ ] Title — description`).
+- Q2 → Per-feature state model = two orthogonal fields `phase ∈ {ba, dev, merge, done}` × `status ∈ {queued, running, blocked, failed, complete}`.
+- Q3 → Merge strategy = `git merge --squash` + single Conventional-Commits commit; feature branch retained.
+- Q4 → Default parallelism = `ba: 2, dev: 2`.
+- Q5 → Dirty-tree behaviour = configurable `safety.on_dirty_tree: refuse | stash | ignore`, defaulting to `refuse`.
+
+Deferred to `/speckit-plan` (low-impact for spec phase): concrete performance/latency targets, scalability ceiling on backlog size, runtime observability format (progress reporting cadence), security/privacy posture for clarification logs.
