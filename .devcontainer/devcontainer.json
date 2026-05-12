@@ -1,0 +1,38 @@
+{
+  "name": "ai-hint",
+  "image": "mcr.microsoft.com/devcontainers/python:1-3.11",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20"
+    },
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {}
+  },
+  "remoteUser": "vscode",
+  "containerEnv": {
+    "CLAUDE_CONFIG_DIR": "/home/vscode/.claude",
+    "UV_PROJECT_ENVIRONMENT": "/home/vscode/.venv-ai-hint",
+    "UV_LINK_MODE": "copy"
+  },
+  "mounts": [
+    "source=ai-hint-claude-config-${devcontainerId},target=/home/vscode/.claude,type=volume",
+    "source=${localEnv:HOME}/.ssh,target=/tmp/.ssh-host,type=bind,readonly"
+  ],
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "anthropic.claude-code",
+        "ms-python.python",
+        "charliermarsh.ruff",
+        "ms-python.mypy-type-checker"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/home/vscode/.venv-ai-hint/bin/python",
+        "[python]": {
+          "editor.formatOnSave": true,
+          "editor.defaultFormatter": "charliermarsh.ruff"
+        }
+      }
+    }
+  }
+}
