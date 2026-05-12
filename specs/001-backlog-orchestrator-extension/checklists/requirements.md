@@ -34,7 +34,7 @@
 - Initial spec used Assumptions instead of `[NEEDS CLARIFICATION]` markers; `/speckit-clarify` session on 2026-05-12 promoted 5 of those defaults to explicit decisions (see `## Clarifications` in spec.md).
 - "Mandatory" sections per the template (User Scenarios & Testing, Requirements, Success Criteria) are all populated. Optional sections (Key Entities, Dependencies) are included because the feature has a data model and external dependencies.
 
-## Clarify session 2026-05-12
+## Clarify session 2026-05-12 (first wave)
 
 - Q1 → Backlog parsing format = single-line top-level checkboxes (`- [ ] Title — description`).
 - Q2 → Per-feature state model = two orthogonal fields `phase ∈ {ba, dev, merge, done}` × `status ∈ {queued, running, blocked, failed, complete}`.
@@ -42,4 +42,18 @@
 - Q4 → Default parallelism = `ba: 2, dev: 2`.
 - Q5 → Dirty-tree behaviour = configurable `safety.on_dirty_tree: refuse | stash | ignore`, defaulting to `refuse`.
 
-Deferred to `/speckit-plan` (low-impact for spec phase): concrete performance/latency targets, scalability ceiling on backlog size, runtime observability format (progress reporting cadence), security/privacy posture for clarification logs.
+## Clarify session 2026-05-12 (second wave)
+
+- Q6 → Entry-point slash command = `/speckit-orchestrate`.
+- Q7 → BA→Dev gate = configurable `ba_gate.strictness: strict | trust | severity_based`, default `strict` (all 4 artifacts on disk + no open clarifications + `ba_done` payload).
+- Q8 → Re-run identity rule = case-normalised, whitespace-trimmed title. Description edits do NOT trigger re-processing; removed items stay in state as history.
+- Q9 → Failed-feature retry = opt-in `--retry-failed` flag that resets all `status=failed` back to `phase=ba, status=queued`.
+- Q10 → Sequence numbering / worktree provisioning = Lead-owned. Lead pre-allocates IDs and creates worktrees+branches before spawning BAs (no concurrent races on the shared sequence).
+
+## Editorial fixes applied during the second wave
+
+- US1 Independent Test: removed phantom `auto_clarify_default: true` config (never defined elsewhere); updated to mention `/speckit-orchestrate`.
+- US1 AS-1, US3 AS-1/2/3, SC-002/003/007: replaced stale `merged` / `ba_in_progress` wording with the canonical `phase=done, status=complete` / `phase=ba, status=running` terminology.
+- US2/3/5 Independent Tests: now reference `/speckit-orchestrate` rather than the vague "run the Lead".
+
+Deferred to `/speckit-plan` (low-impact for spec phase): concrete performance/latency targets, scalability ceiling on backlog size, runtime observability format (progress reporting cadence), security/privacy posture for clarification logs, subagent hang/timeout policy.

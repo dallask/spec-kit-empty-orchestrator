@@ -14,6 +14,11 @@
 - Q: What merge strategy does the Lead use when integrating a completed feature into the target branch? → A: Configurable via YAML — `merge.strategy ∈ {squash, merge, rebase}`, defaulting to `squash`. All three strategies MUST produce Conventional-Commits-compliant commit messages on the target so semantic-release can classify them. The feature branch is retained (not deleted) for audit regardless of strategy. *(Revised from "squash-only" earlier in this session.)*
 - Q: What are the out-of-box default parallelism caps? → A: `parallelism.ba: 2` and `parallelism.dev: 2`. Conservative defaults that fit a developer laptop and typical LLM provider concurrency limits; users override via YAML for more.
 - Q: What should happen when the Lead is started with uncommitted changes in the main working tree? → A: Configurable via `safety.on_dirty_tree: refuse | stash | ignore`, defaulting to `refuse`. `refuse` fails fast with a list of dirty paths; `stash` auto-stashes on start and best-effort restores on exit; `ignore` proceeds regardless.
+- Q: What slash command launches the Lead (the orchestrator entry point)? → A: `/speckit-orchestrate`. Matches the existing `/speckit-<verb>` skill naming convention.
+- Q: What defines "BA pipeline completed successfully" — the gate Lead checks before spawning Dev? → A: Configurable via `ba_gate.strictness ∈ {strict, trust, severity_based}`, default `strict`. `strict`: all four artifacts (`spec.md`, `plan.md`, `tasks.md`, analyze report) exist on disk + no open clarifications + BA emits `ba_done` payload. `trust`: only the `ba_done` payload is required. `severity_based`: `/speckit.analyze` report must show zero CRITICAL/HIGH findings (LOW/MEDIUM allowed).
+- Q: How does Lead match a backlog item to an existing state record on re-run? → A: Identity = case-normalised, whitespace-trimmed item title. New title in backlog → new feature added to state; same title → existing record reused; description edits do NOT affect identity. Items removed from `BACKLOG.md` remain in state as historical records and are not re-processed.
+- Q: How does a user retry a feature that ended in `status=failed`? → A: Opt-in flag — `/speckit-orchestrate --retry-failed`. On invocation, Lead resets every feature record with `status=failed` back to `phase=ba, status=queued` (clearing `last_payload`) before scheduling. A normal re-run without the flag leaves failed features alone.
+- Q: Who owns sequential feature numbering and worktree/branch creation when BAs run in parallel? → A: Lead pre-allocates. Before spawning any BA, Lead determines each Feature's sequential ID, creates the worktree and branch itself (driving the existing `speckit.git.feature` hook with an explicit number / pre-set `SPECIFY_FEATURE`), then spawns each BA into the already-prepared worktree. BAs never invoke branch/numbering creation themselves and never race on the shared sequence.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -23,11 +28,11 @@ A product owner or tech lead has a `BACKLOG.md` file containing multiple feature
 
 **Why this priority**: This is the core value proposition of the extension. Without it, the extension does not exist; it is the smallest slice that justifies building anything.
 
-**Independent Test**: With a `BACKLOG.md` containing two unambiguous feature items and `auto_clarify_default: true` configured, run the Lead end-to-end. Verify that two feature branches are produced, each contains a complete spec/plan/tasks set plus an implementation, and both are merged into the configured dev branch without the user being prompted.
+**Independent Test**: With a `BACKLOG.md` containing two unambiguous feature items (no clarifications needed), run `/speckit-orchestrate`. Verify that two feature branches are produced, each contains a complete spec/plan/tasks set plus an implementation, and both are integrated into the configured target branch without the user being prompted.
 
 **Acceptance Scenarios**:
 
-1. **Given** a `BACKLOG.md` with N parseable feature items and a configured parallelism cap of P, **When** the user starts the Lead, **Then** the Lead creates at most P worktrees concurrently, processes all N items through the full BA→Dev pipeline, and reports a final summary listing each item's terminal status (merged, blocked, failed).
+1. **Given** a `BACKLOG.md` with N parseable feature items and a configured parallelism cap of P, **When** the user runs `/speckit-orchestrate`, **Then** the Lead creates at most P worktrees concurrently, processes all N items through the full BA→Dev pipeline, and reports a final summary listing each item's terminal `(phase, status)` per the documented state model.
 2. **Given** a feature whose BA pipeline completes without errors, **When** BA reports success, **Then** the Lead spawns a Dev subagent against that feature's worktree and spec; on Dev success, the Lead merges that feature branch into the configured dev branch.
 3. **Given** an empty or missing `BACKLOG.md`, **When** the user starts the Lead, **Then** the Lead exits cleanly with a message explaining that no actionable items were found and makes no git changes.
 
@@ -39,7 +44,7 @@ While the Lead is driving several backlog items in parallel, one BA subagent rea
 
 **Why this priority**: Parallel execution is meaningless if a single ambiguous backlog item halts the whole run. This behavior is what makes the orchestrator usable on real backlogs, which always contain some under-specified items.
 
-**Independent Test**: With a backlog of three items where one is intentionally vague (e.g., "add notifications"), run the Lead. Verify the user is presented with that one item's clarification question via the Lead, that the other two items continue progressing while the question is open, and that answering the question resumes only the paused feature.
+**Independent Test**: With a backlog of three items where one is intentionally vague (e.g., "add notifications"), run `/speckit-orchestrate`. Verify the user is presented with that one item's clarification question via the Lead, that the other two items continue progressing while the question is open, and that answering the question resumes only the paused feature.
 
 **Acceptance Scenarios**:
 
@@ -55,13 +60,13 @@ A backlog run was interrupted (process killed, machine slept, transient error). 
 
 **Why this priority**: Long backlog runs are realistic. Without resumability, any interruption forces a costly restart that re-runs Spec Kit phases already paid for. It is not P1 because a happy-path single run already delivers value.
 
-**Independent Test**: Start a backlog run, kill the Lead session after at least one feature has reached the Dev phase and at least one is still in BA. Restart the Lead with the same backlog; verify that already-merged features are skipped, in-progress features pick up where they left off, and the final outcome matches an uninterrupted run.
+**Independent Test**: Run `/speckit-orchestrate` on a multi-item backlog, kill the Lead session after at least one feature has reached the Dev phase and at least one is still in BA. Re-run `/speckit-orchestrate` with the same backlog; verify that already-complete features are skipped, in-progress features pick up where they left off, and the final outcome matches an uninterrupted run.
 
 **Acceptance Scenarios**:
 
-1. **Given** a state file recording feature X as `merged`, **When** the Lead restarts, **Then** feature X is not re-processed and is reported as already complete.
-2. **Given** a state file recording feature Y as `ba_in_progress` with its worktree intact, **When** the Lead restarts, **Then** the Lead respawns a BA subagent against that worktree and the JSON state advances normally on success.
-3. **Given** a state file references a worktree that no longer exists on disk, **When** the Lead restarts, **Then** the Lead reports the corruption for that feature, leaves the rest of the run untouched, and exits non-zero only after attempting the remaining features.
+1. **Given** a state file recording feature X as `phase=done, status=complete`, **When** the Lead restarts, **Then** feature X is not re-processed and is reported as already complete.
+2. **Given** a state file recording feature Y as `phase=ba, status=running` with its worktree intact, **When** the Lead restarts, **Then** the Lead respawns a BA subagent against that worktree, restarts the recorded phase, and the JSON state advances normally on success.
+3. **Given** a state file references a worktree that no longer exists on disk, **When** the Lead restarts, **Then** the Lead marks that feature `phase=ba, status=failed` with a worktree-missing payload, leaves the rest of the run untouched, and exits non-zero only after attempting the remaining features.
 
 ---
 
@@ -87,7 +92,7 @@ After the orchestrator finishes, the user wants a single human-readable summary:
 
 **Why this priority**: Nice-to-have for human review and stakeholder reporting; not on the critical path because the JSON state file already contains everything.
 
-**Independent Test**: Run the Lead on a backlog containing a mix of clean items, an item with an unanswered clarification, and an item designed to fail in Dev. Verify the final report enumerates all three with the correct status and points to the spec file and feature branch for each.
+**Independent Test**: Run `/speckit-orchestrate` on a backlog containing a mix of clean items, an item with an unanswered clarification, and an item designed to fail in Dev. Verify the final report enumerates all three with the correct status and points to the spec file and feature branch for each.
 
 **Acceptance Scenarios**:
 
@@ -113,16 +118,30 @@ After the orchestrator finishes, the user wants a single human-readable summary:
 
 ### Functional Requirements
 
+#### Entry point
+
+- **FR-000**: Extension MUST expose `/speckit-orchestrate` as the single user-facing slash command that starts the Lead. No other entry point (CLI flag, alternate command name, auto-start) is supported in v1.
+- **FR-000a**: `/speckit-orchestrate` MUST accept an optional `--retry-failed` flag. When supplied, before scheduling any new work, Lead MUST reset every feature record whose `status = failed` back to `phase = ba, status = queued` and clear that record's `last_payload`. Without the flag, failed features are left as-is and Lead does not re-process them. The flag is the only supported retry mechanism in v1.
+
 #### Backlog ingestion
 
 - **FR-001**: Extension MUST read a `BACKLOG.md` file from the project root and parse it into an ordered list of feature items. The canonical item grammar is one top-level Markdown checkbox per feature: `- [ ] Title — description`. Lines that are not top-level checkboxes are ignored for item segmentation.
-- **FR-002**: Extension MUST treat each parsed checkbox item as an independent feature with its own identity (id assigned by parse order, title, raw description). Nested content under a checkbox (indented sub-bullets, nested checkboxes) is NOT treated as a separate feature and MAY be ignored or concatenated into the parent description per a documented default.
+- **FR-002**: Extension MUST treat each parsed checkbox item as an independent feature. A feature's canonical identity is the case-normalised, whitespace-trimmed item title (the text up to the first `—` / `--` / ` - ` separator, or the whole item text if no separator is present). On re-run, Lead MUST match backlog items to existing state records by this title identity:
+  - Backlog item with title not in state → new feature appended.
+  - Backlog item with title already in state → existing record reused; description edits do NOT trigger re-processing.
+  - State record whose title no longer appears in the backlog → retained as historical; never re-processed.
+  Nested content under a checkbox (indented sub-bullets, nested checkboxes) is NOT treated as a separate feature and MAY be ignored or concatenated into the parent description per a documented default.
 - **FR-003**: Extension MUST report an empty-or-missing `BACKLOG.md`, or a `BACKLOG.md` containing zero top-level checkbox items, as a clean, non-error end state.
 - **FR-003a**: Extension MUST skip checkbox items already marked complete (`- [x]` / `- [X]`) so users can mark items "done" in the file to keep them out of subsequent runs.
 
 #### Worktree isolation
 
 - **FR-004**: Extension MUST execute each feature inside its own git worktree, separate from the user's main working tree.
+- **FR-004a**: Lead MUST own all sequential feature numbering and worktree/branch provisioning. Before spawning a BA subagent, Lead MUST:
+  1. Pre-allocate the next sequential Feature ID for that backlog item.
+  2. Create the worktree and feature branch itself by invoking the existing `speckit.git.feature` hook with an explicit number / pre-set `SPECIFY_FEATURE` so no scan-and-claim race occurs.
+  3. Spawn the BA into the already-prepared worktree.
+  BA subagents MUST NOT trigger branch creation or number allocation on their own; if a downstream Spec Kit hook would normally create a branch and one already exists with the expected name, the hook MUST be a no-op for the BA.
 - **FR-005**: Extension MUST limit the number of concurrently active worktrees to the configured parallelism cap.
 - **FR-006**: Extension MUST clean up or clearly preserve worktrees on failure according to a documented, configurable policy (default: preserve on failure for inspection, prune on successful merge).
 
@@ -131,7 +150,11 @@ After the orchestrator finishes, the user wants a single human-readable summary:
 - **FR-007**: Only the Lead (the main Claude Code session) MUST delegate work to subagents; no subagent may spawn or delegate to another subagent. This aligns with Claude Code's documented subagent model.
 - **FR-008**: All cross-agent communication MUST flow through the Lead; BA and Dev subagents MUST NOT communicate with each other directly.
 - **FR-009**: Lead MUST spawn a BA subagent per feature to run the full BA pipeline (`/speckit.specify`, `/speckit.clarify`, `/speckit.plan`, `/speckit.tasks`, `/speckit.analyze`) inside that feature's worktree.
-- **FR-010**: Lead MUST spawn a Dev subagent per feature, only after the BA pipeline for that feature has completed successfully, to run `/speckit.implement` inside that feature's worktree.
+- **FR-010**: Lead MUST spawn a Dev subagent per feature only after the BA pipeline for that feature passes the gate defined by `ba_gate.strictness`:
+  - `strict` (default): all four BA artifacts exist on disk in the feature directory (`spec.md`, `plan.md`, `tasks.md`, analyze report), the feature record carries no open clarifications, AND the BA subagent has emitted a `ba_done` payload.
+  - `trust`: the BA subagent has emitted a `ba_done` payload; Lead performs no artifact-existence check.
+  - `severity_based`: the BA's analyze report MUST contain zero CRITICAL or HIGH findings (LOW/MEDIUM allowed). Artifact existence is implied by analyze having run.
+  When the gate fails, Lead MUST mark the feature `phase=ba, status=failed` with a gate-violation payload and MUST NOT spawn Dev. The feature is NOT silently downgraded to a weaker strictness.
 
 #### Pause-for-clarification behavior
 
@@ -161,8 +184,8 @@ After the orchestrator finishes, the user wants a single human-readable summary:
 #### Configuration
 
 - **FR-021**: Extension MUST read its configuration from a YAML file located within the extension's directory.
-- **FR-022**: Configuration MUST expose at minimum: backlog file path, BA parallelism cap, Dev parallelism cap, target dev branch name, worktree cleanup policy, and dirty-tree safety mode.
-- **FR-023**: Extension MUST apply documented defaults for every config key so it runs with no user-supplied config. Defaults: `backlog.path: BACKLOG.md`, `parallelism.ba: 2`, `parallelism.dev: 2`, `merge.target_branch: dev`, `merge.strategy: squash`, `worktree.retain_on_failure: true`, `worktree.prune_on_success: true`, `safety.on_dirty_tree: refuse`.
+- **FR-022**: Configuration MUST expose at minimum: backlog file path, BA parallelism cap, Dev parallelism cap, target dev branch name, worktree cleanup policy, dirty-tree safety mode, and BA gate strictness.
+- **FR-023**: Extension MUST apply documented defaults for every config key so it runs with no user-supplied config. Defaults: `backlog.path: BACKLOG.md`, `parallelism.ba: 2`, `parallelism.dev: 2`, `merge.target_branch: dev`, `merge.strategy: squash`, `worktree.retain_on_failure: true`, `worktree.prune_on_success: true`, `safety.on_dirty_tree: refuse`, `ba_gate.strictness: strict`.
 - **FR-023a**: At startup, before any worktree or branch is touched, Lead MUST inspect the main working tree and act per `safety.on_dirty_tree`:
   - `refuse` (default): print the list of modified/untracked paths and exit non-zero with no git side effects.
   - `stash`: create a single stash entry tagged for this run, restore best-effort on clean exit, and warn (do not auto-resolve) if restore conflicts.
@@ -188,7 +211,7 @@ After the orchestrator finishes, the user wants a single human-readable summary:
 
 ### Key Entities *(include if feature involves data)*
 
-- **BacklogItem**: One parsed entry from `BACKLOG.md`. Has an id (sequential), a short title, a raw description, and a source-range pointer back into the backlog file.
+- **BacklogItem**: One parsed entry from `BACKLOG.md`. Has a canonical identity (case-normalised, whitespace-trimmed title), a raw description, and a source-range pointer back into the backlog file. The title identity is what Lead uses to match against existing Feature records.
 - **Feature**: The orchestrator's working unit corresponding to one BacklogItem. Has an id, a worktree path, a feature branch name, a spec directory path, a current `phase` (`ba` | `dev` | `merge` | `done`), a current `status` (`queued` | `running` | `blocked` | `failed` | `complete`), and accumulated payloads (latest BA result, latest Dev result, open clarification if any). Terminal = `phase=done` ∨ `status=failed`.
 - **AgentPayload**: A typed JSON envelope exchanged between Lead and a subagent. Carries: feature id, agent role (`ba` | `dev`), phase, payload type, body, timestamp.
 - **OrchestratorState**: The full JSON state document persisted to disk. Holds the run-level config snapshot, the list of Feature records, and global counters (start time, active worktrees, completed count).
@@ -199,17 +222,17 @@ After the orchestrator finishes, the user wants a single human-readable summary:
 ### Measurable Outcomes
 
 - **SC-001**: An unattended run on a 5-item, fully-specified backlog produces 5 merged feature branches on the configured dev branch with zero user prompts, in less wall-clock time than running the same items sequentially through the Spec Kit flow by hand.
-- **SC-002**: On a backlog where exactly one item needs a clarification, the user is prompted exactly once for that one item and the other items reach `merged` status without being blocked by the pending question.
-- **SC-003**: When a Lead session is killed mid-run and restarted, no feature that had already reached `merged` status is re-processed, and the run continues to completion of the remaining items.
+- **SC-002**: On a backlog where exactly one item needs a clarification, the user is prompted exactly once for that one item and the other items reach `phase=done, status=complete` without being blocked by the pending question.
+- **SC-003**: When a Lead session is killed mid-run and restarted, no feature that had already reached `phase=done, status=complete` is re-processed, and the run continues to completion of the remaining items.
 - **SC-004**: 100% of Lead↔subagent messages observed in a run conform to the documented JSON schema; any non-conforming message is reported as an error rather than silently consumed.
 - **SC-005**: The user can change parallelism caps and the merge target branch by editing the YAML config alone — no code edits and no command-line flags — and the next run reflects the change.
 - **SC-006**: At end-of-run, the printed summary correctly classifies 100% of backlog items by the documented `phase` × `status` model, and the JSON state file's recorded `(phase, status)` for each feature matches the printed summary.
-- **SC-007**: A failed Dev or merge step affects only that one feature; in a 5-item backlog where one item is forced to fail, the other four still reach `merged`.
+- **SC-007**: A failed Dev or merge step affects only that one feature; in a 5-item backlog where one item is forced to fail, the other four still reach `phase=done, status=complete`.
 
 ## Assumptions
 
 - **Backlog format**: Each feature in `BACKLOG.md` is a single top-level Markdown checkbox of the form `- [ ] Title — description`, on a single line. Items marked complete (`- [x]`) are skipped. Headings, prose paragraphs, and indented sub-content are ignored for item segmentation. This is a deliberate, opinionated grammar chosen for unambiguous parsing.
-- **Sequential feature numbering**: The existing `speckit.git.feature` hook handles branch creation and numeric prefixes; the orchestrator reuses it rather than inventing parallel numbering.
+- **Sequential feature numbering**: The existing `speckit.git.feature` hook is the underlying mechanism for assigning numeric prefixes and creating branches, but the Lead — not the BA subagents — drives it. The Lead pre-allocates the next sequential ID per backlog item and invokes the hook with an explicit number before any BA spawn, so concurrent BAs never race on the shared sequence. The orchestrator does not invent a parallel numbering scheme.
 - **Claude Code agents model is authoritative**: Subagents cannot spawn other subagents and only the main session delegates. The extension's contract is built on top of this — it does not try to work around it.
 - **Worktree backend**: Standard `git worktree` is the isolation primitive; the project is assumed to be a git repository with a clean enough state to support multiple concurrent worktrees.
 - **Single user, single Lead**: Exactly one Lead session is active per backlog at a time. Concurrent Leads on the same `BACKLOG.md` are out of scope for v1.
