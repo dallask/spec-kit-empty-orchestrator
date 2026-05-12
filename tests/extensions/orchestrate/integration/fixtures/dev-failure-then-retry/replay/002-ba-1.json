@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "feature_id": "002",
+  "agent_role": "ba",
+  "phase": "ba",
+  "payload_type": "result",
+  "timestamp": "2026-05-12T14:05:42Z",
+  "body": {
+    "artifacts": {
+      "spec_path": "specs/002-profile-page/spec.md",
+      "plan_path": "specs/002-profile-page/plan.md",
+      "tasks_path": "specs/002-profile-page/tasks.md",
+      "analyze_path": "specs/002-profile-page/analysis.md"
+    },
+    "ba_done": true
+  }
+}

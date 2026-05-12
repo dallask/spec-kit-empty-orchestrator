@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spec-kit-empty-orchestrator/contracts/orchestrate-config.schema.json",
+  "title": "OrchestrateConfig",
+  "description": "Schema for orchestrate-config.yml after YAML->JSON conversion. All keys have defaults; the user MAY override any subset.",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "backlog": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "path": { "type": "string", "default": "BACKLOG.md", "minLength": 1 }
+      }
+    },
+    "parallelism": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ba": { "type": "integer", "default": 2, "minimum": 1, "maximum": 16 },
+        "dev": { "type": "integer", "default": 2, "minimum": 1, "maximum": 16 }
+      }
+    },
+    "merge": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "target_branch": { "type": "string", "default": "dev", "minLength": 1 },
+        "strategy": { "type": "string", "enum": ["squash", "merge", "rebase"], "default": "squash" }
+      }
+    },
+    "worktree": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "retain_on_failure": { "type": "boolean", "default": true },
+        "prune_on_success": { "type": "boolean", "default": true }
+      }
+    },
+    "safety": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "on_dirty_tree": {
+          "type": "string",
+          "enum": ["refuse", "stash", "ignore"],
+          "default": "refuse"
+        }
+      }
+    },
+    "ba_gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "strictness": {
+          "type": "string",
+          "enum": ["strict", "trust", "severity_based"],
+          "default": "strict"
+        }
+      }
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max_features": { "type": "integer", "default": 200, "minimum": 1, "maximum": 1000 }
+      }
+    }
+  }
+}

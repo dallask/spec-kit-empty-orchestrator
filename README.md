@@ -2,6 +2,18 @@
 
 Extension for [github/spec-kit](https://github.com/github/spec-kit) that drives the full Spec Kit flow from a backlog: orchestrates BA and Dev agents across isolated worktrees.
 
+## Getting started
+
+The orchestrator ships as an installable Spec Kit extension under [`.specify/extensions/orchestrate/`](./.specify/extensions/orchestrate/):
+
+```sh
+sh .specify/extensions/orchestrate/install.sh   # one-time install
+/speckit-orchestrate                            # run against your BACKLOG.md
+/speckit-orchestrate --retry-failed             # re-run, retrying any previously failed features
+```
+
+See the [quickstart guide](./specs/001-backlog-orchestrator-extension/quickstart.md) and the [full spec](./specs/001-backlog-orchestrator-extension/spec.md). The extension overview lives at [`.specify/extensions/orchestrate/README.md`](./.specify/extensions/orchestrate/README.md).
+
 ## Overview
 
 This Spec Kit extension reads `BACKLOG.md`, treats each item as a separate feature, and runs the pipeline:

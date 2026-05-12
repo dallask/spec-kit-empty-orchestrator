@@ -1,0 +1,226 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://spec-kit-empty-orchestrator/contracts/agent-payload.schema.json",
+  "title": "AgentPayload",
+  "description": "Envelope for every Lead<->subagent message. Producer MUST emit valid JSON; receiver MUST validate against this schema. Schema-invalid input is treated as an `error` payload.",
+  "type": "object",
+  "required": ["schema_version", "feature_id", "agent_role", "phase", "payload_type", "body", "timestamp"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Bumped on any backwards-incompatible schema change."
+    },
+    "feature_id": {
+      "type": "string",
+      "pattern": "^[0-9]{3}$|^-$",
+      "description": "Zero-padded 3-digit feature ID, or '-' for run-level events."
+    },
+    "agent_role": {
+      "type": "string",
+      "enum": ["lead", "ba", "dev"]
+    },
+    "phase": {
+      "type": "string",
+      "enum": ["ba", "dev", "merge"]
+    },
+    "payload_type": {
+      "type": "string",
+      "enum": ["assignment", "progress", "result", "clarification_request", "clarification_answer", "error"]
+    },
+    "body": {
+      "type": "object"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "correlation_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "REQUIRED on clarification_request and clarification_answer; the answer MUST echo the request's id."
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "payload_type": { "const": "assignment" } } },
+      "then": {
+        "properties": {
+          "agent_role": { "const": "lead" },
+          "body": { "$ref": "#/$defs/assignmentBody" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "payload_type": { "const": "progress" } } },
+      "then": {
+        "properties": {
+          "agent_role": { "enum": ["ba", "dev"] },
+          "body": { "$ref": "#/$defs/progressBody" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "payload_type": { "const": "result" } } },
+      "then": {
+        "properties": {
+          "agent_role": { "enum": ["ba", "dev"] },
+          "body": { "$ref": "#/$defs/resultBody" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "payload_type": { "const": "clarification_request" } } },
+      "then": {
+        "required": ["correlation_id"],
+        "properties": {
+          "agent_role": { "const": "ba" },
+          "phase": { "enum": ["ba"] },
+          "body": { "$ref": "#/$defs/clarificationRequestBody" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "payload_type": { "const": "clarification_answer" } } },
+      "then": {
+        "required": ["correlation_id"],
+        "properties": {
+          "agent_role": { "const": "lead" },
+          "body": { "$ref": "#/$defs/clarificationAnswerBody" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "payload_type": { "const": "error" } } },
+      "then": {
+        "properties": {
+          "body": { "$ref": "#/$defs/errorBody" }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "assignmentBody": {
+      "type": "object",
+      "required": ["feature_summary", "worktree_path", "config_snapshot"],
+      "additionalProperties": false,
+      "properties": {
+        "feature_summary": {
+          "type": "object",
+          "required": ["id", "title", "description"],
+          "additionalProperties": false,
+          "properties": {
+            "id": { "type": "string" },
+            "title": { "type": "string" },
+            "description": { "type": "string" }
+          }
+        },
+        "worktree_path": { "type": "string", "minLength": 1 },
+        "config_snapshot": { "type": "object" },
+        "retry_with": {
+          "$ref": "#/$defs/clarificationAnswerBody",
+          "description": "Optional — present when the Lead is re-spawning a BA after a clarification was answered."
+        }
+      }
+    },
+    "progressBody": {
+      "type": "object",
+      "required": ["note", "step"],
+      "additionalProperties": false,
+      "properties": {
+        "note": { "type": "string", "maxLength": 500 },
+        "step": {
+          "type": "string",
+          "description": "Free-form short label (e.g., 'specify', 'clarify', 'analyze')."
+        }
+      }
+    },
+    "resultBody": {
+      "type": "object",
+      "required": ["artifacts"],
+      "additionalProperties": false,
+      "properties": {
+        "artifacts": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "spec_path": { "type": "string" },
+            "plan_path": { "type": "string" },
+            "tasks_path": { "type": "string" },
+            "analyze_path": { "type": "string" },
+            "analyze_severity_summary": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "critical": { "type": "integer", "minimum": 0 },
+                "high": { "type": "integer", "minimum": 0 },
+                "medium": { "type": "integer", "minimum": 0 },
+                "low": { "type": "integer", "minimum": 0 }
+              }
+            }
+          },
+          "description": "BA returns spec/plan/tasks/analyze paths. Dev returns nothing further here — see ba_done/dev_done."
+        },
+        "ba_done": {
+          "type": "boolean",
+          "description": "REQUIRED true on BA result for strict gate."
+        },
+        "dev_done": {
+          "type": "boolean",
+          "description": "REQUIRED true on Dev result."
+        }
+      }
+    },
+    "clarificationRequestBody": {
+      "type": "object",
+      "required": ["question", "context"],
+      "additionalProperties": false,
+      "properties": {
+        "question": { "type": "string", "minLength": 1 },
+        "context": {
+          "type": "string",
+          "description": "What in the spec / analyze report triggered the question. Truncated to ~500 chars."
+        },
+        "options": {
+          "type": "array",
+          "items": { "type": "string" },
+          "maxItems": 5,
+          "description": "Optional multiple-choice options the user can pick from."
+        }
+      }
+    },
+    "clarificationAnswerBody": {
+      "type": "object",
+      "required": ["answer", "original_question"],
+      "additionalProperties": false,
+      "properties": {
+        "answer": { "type": "string" },
+        "original_question": { "type": "string" }
+      }
+    },
+    "errorBody": {
+      "type": "object",
+      "required": ["code", "message", "recoverable"],
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "string",
+          "description": "Short machine-readable code, e.g., 'subagent_invalid_json', 'ba_gate_failed', 'merge_conflict', 'worktree_missing'."
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable explanation."
+        },
+        "recoverable": {
+          "type": "boolean",
+          "description": "When true, the same phase MAY be retried (used by --retry-failed). When false, the feature is permanently failed."
+        },
+        "details": {
+          "type": "object",
+          "description": "Optional structured detail (e.g., conflict file list, non-CC commit SHAs)."
+        }
+      }
+    }
+  }
+}

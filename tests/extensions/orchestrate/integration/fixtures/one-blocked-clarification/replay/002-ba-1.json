@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "feature_id": "002",
+  "agent_role": "ba",
+  "phase": "ba",
+  "payload_type": "clarification_request",
+  "timestamp": "2026-05-12T14:04:33Z",
+  "correlation_id": "002-clarify-a1b2",
+  "body": {
+    "question": "What notification channels should we support: in-app only, in-app + email, or in-app + email + push?",
+    "context": "The backlog item 'Notifications — Add notifications' does not specify channels. The choice materially affects scope.",
+    "options": ["In-app only", "In-app + email", "In-app + email + push"]
+  }
+}

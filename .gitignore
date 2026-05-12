@@ -1,2 +1,9 @@
 CLAUDE.local.md
 .claude/settings.local.json
+
+# Backlog Orchestrator Extension — runtime artifacts (never commit)
+.specify/extensions/orchestrate/state.json
+.specify/extensions/orchestrate/events.log
+.specify/extensions/orchestrate/lock
+.specify/extensions/orchestrate/worktrees/
+.specify/extensions/orchestrate/orchestrate-config.yml.local

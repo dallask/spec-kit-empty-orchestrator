@@ -1,0 +1,63 @@
+schema_version: "1.0"
+
+extension:
+  id: orchestrate
+  name: "Backlog Orchestrator"
+  version: "1.0.0"
+  description: "Hub-and-spoke orchestrator that drives BACKLOG.md through the full Spec Kit pipeline (specify→clarify→plan→tasks→analyze→implement) per item, using BA and Dev subagents in isolated worktrees."
+  author: spec-kit-empty-orchestrator
+  repository: https://github.com/spec-kit-community/spec-kit-empty-orchestrator
+  license: MIT
+
+requires:
+  speckit_version: ">=0.8.0"
+  tools:
+    - name: git
+      required: true
+    - name: jq
+      required: true
+
+provides:
+  commands:
+    - name: speckit.orchestrate
+      file: commands/speckit.orchestrate.md
+      description: "Drive every BACKLOG.md item through specify→implement using hub-and-spoke BA/Dev subagents."
+
+  agents:
+    - name: orchestrate-ba
+      file: agents/orchestrate-ba.md
+      description: "BA subagent — runs /speckit.specify→/speckit.analyze for one feature inside its worktree."
+    - name: orchestrate-dev
+      file: agents/orchestrate-dev.md
+      description: "Dev subagent — runs /speckit.implement against a completed spec inside its worktree."
+
+  config:
+    - name: "orchestrate-config.yml"
+      template: "config-template.yml"
+      description: "Backlog orchestrator configuration (parallelism, merge strategy, safety, BA gate strictness)."
+      required: false
+
+  schemas:
+    - schemas/agent-payload.schema.json
+    - schemas/orchestrator-state.schema.json
+    - schemas/orchestrate-config.schema.json
+
+# This extension does not hook into other Spec Kit commands — it IS the orchestrator.
+hooks: {}
+
+tags:
+  - "orchestrator"
+  - "backlog"
+  - "hub-and-spoke"
+  - "claude-code"
+  - "agents"
+
+config:
+  defaults:
+    parallelism_ba: 2
+    parallelism_dev: 2
+    merge_target_branch: dev
+    merge_strategy: squash
+    safety_on_dirty_tree: refuse
+    ba_gate_strictness: strict
+    max_features: 200
