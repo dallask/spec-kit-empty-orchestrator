@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "feature_id": "002",
+  "agent_role": "dev",
+  "phase": "dev",
+  "payload_type": "error",
+  "timestamp": "2026-05-12T15:50:11Z",
+  "body": {
+    "code": "tests_failing",
+    "message": "3 of 17 tests fail in profile-page suite",
+    "recoverable": true,
+    "details": {"failed_test_count": 3}
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "_comment": "After the user answers feature 002's clarification, all three features should reach (done, complete). Features 001 and 003 reach complete WITHOUT being blocked by 002.",
+  "expectations": {
+    "feature_count": 3,
+    "all_done_complete": true,
+    "counters": {"queued": 0, "running": 0, "blocked": 0, "failed": 0, "complete": 3},
+    "features": [
+      {"id": "001", "title": "add user login", "phase": "done", "status": "complete"},
+      {"id": "002", "title": "notifications", "phase": "done", "status": "complete"},
+      {"id": "003", "title": "search bar", "phase": "done", "status": "complete"}
+    ],
+    "ba_invocations_for_002": 2,
+    "user_prompts": 1
+  }
+}

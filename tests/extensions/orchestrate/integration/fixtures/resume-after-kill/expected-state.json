@@ -1,0 +1,13 @@
+{
+  "_comment": "After resume, both features reach (done, complete). The post-resume run should NOT redo BA for feature 001 (its result is in last_payload from the first run); it picks up from (dev, queued) and proceeds.",
+  "expectations": {
+    "feature_count": 2,
+    "counters": {"queued": 0, "running": 0, "blocked": 0, "failed": 0, "complete": 2},
+    "features": [
+      {"id": "001", "title": "add user login", "phase": "done", "status": "complete"},
+      {"id": "002", "title": "profile page",   "phase": "done", "status": "complete"}
+    ],
+    "ba_invocations_per_feature": {"001": 1, "002": 1},
+    "dev_invocations_per_feature": {"001": 1, "002": 1}
+  }
+}

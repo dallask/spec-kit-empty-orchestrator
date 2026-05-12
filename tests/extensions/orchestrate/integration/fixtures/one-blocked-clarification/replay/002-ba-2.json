@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "feature_id": "002",
+  "agent_role": "ba",
+  "phase": "ba",
+  "payload_type": "result",
+  "timestamp": "2026-05-12T14:09:50Z",
+  "body": {
+    "artifacts": {
+      "spec_path": "specs/002-notifications/spec.md",
+      "plan_path": "specs/002-notifications/plan.md",
+      "tasks_path": "specs/002-notifications/tasks.md",
+      "analyze_path": "specs/002-notifications/analysis.md",
+      "analyze_severity_summary": {"critical": 0, "high": 0, "medium": 2, "low": 4}
+    },
+    "ba_done": true
+  }
+}

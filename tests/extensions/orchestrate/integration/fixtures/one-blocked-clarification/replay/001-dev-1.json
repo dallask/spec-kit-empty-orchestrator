@@ -1,0 +1,9 @@
+{
+  "schema_version": "1.0",
+  "feature_id": "001",
+  "agent_role": "dev",
+  "phase": "dev",
+  "payload_type": "result",
+  "timestamp": "2026-05-12T15:42:08Z",
+  "body": {"artifacts": {}, "dev_done": true}
+}

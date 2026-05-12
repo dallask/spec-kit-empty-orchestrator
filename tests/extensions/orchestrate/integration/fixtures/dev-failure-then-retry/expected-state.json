@@ -1,0 +1,24 @@
+{
+  "_comment": "Three runs: (1) feature 002 ends (dev, failed); (2) re-run without --retry-failed leaves it alone; (3) --retry-failed resets 002 to (ba, queued); 002's BA replays from 002-ba-1.json and Dev from 002-dev-2.json, reaching (done, complete).",
+  "expectations": {
+    "after_run_1": {
+      "features": [
+        {"id": "001", "phase": "done", "status": "complete"},
+        {"id": "002", "phase": "dev",  "status": "failed"}
+      ]
+    },
+    "after_run_2_no_flag": {
+      "features": [
+        {"id": "001", "phase": "done", "status": "complete"},
+        {"id": "002", "phase": "dev",  "status": "failed"}
+      ],
+      "_note": "Feature 002 was NOT retried because --retry-failed was not passed."
+    },
+    "after_run_3_with_retry_failed": {
+      "features": [
+        {"id": "001", "phase": "done", "status": "complete"},
+        {"id": "002", "phase": "done", "status": "complete"}
+      ]
+    }
+  }
+}

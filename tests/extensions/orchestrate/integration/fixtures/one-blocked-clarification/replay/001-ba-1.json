@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "feature_id": "001",
+  "agent_role": "ba",
+  "phase": "ba",
+  "payload_type": "result",
+  "timestamp": "2026-05-12T14:03:11Z",
+  "body": {
+    "artifacts": {
+      "spec_path": "specs/001-add-user-login/spec.md",
+      "plan_path": "specs/001-add-user-login/plan.md",
+      "tasks_path": "specs/001-add-user-login/tasks.md",
+      "analyze_path": "specs/001-add-user-login/analysis.md",
+      "analyze_severity_summary": {"critical": 0, "high": 0, "medium": 0, "low": 1}
+    },
+    "ba_done": true
+  }
+}
