@@ -37,8 +37,8 @@ This is a Spec Kit **extension** increment — no `src/`. New files live under:
 
 **Purpose**: Create the directories the new files will live in and confirm the orchestrator extension is the integration point.
 
-- [ ] T001 Create the new asset directory at `.specify/extensions/orchestrate/assets/` (empty for now)
-- [ ] T002 [P] Verify the orchestrator extension's existing layout is intact (`.specify/extensions/orchestrate/{extension.yml,install.sh,commands/,scripts/sh/}` all present) — no edits, just a sanity check before Foundational work touches them
+- [X] T001 Create the new asset directory at `.specify/extensions/orchestrate/assets/` (empty for now)
+- [X] T002 [P] Verify the orchestrator extension's existing layout is intact (`.specify/extensions/orchestrate/{extension.yml,install.sh,commands/,scripts/sh/}` all present) — no edits, just a sanity check before Foundational work touches them
 
 ---
 
@@ -48,13 +48,13 @@ This is a Spec Kit **extension** increment — no `src/`. New files live under:
 
 **⚠️ CRITICAL**: No user-story phase can begin until Phase 2 completes.
 
-- [ ] T003 [P] Update `.specify/extensions/orchestrate/extension.yml` to add two new entries under `provides.commands`:
+- [X] T003 [P] Update `.specify/extensions/orchestrate/extension.yml` to add two new entries under `provides.commands`:
   - `speckit.sandbox.prepare` → `commands/speckit.sandbox.prepare.md`
   - `speckit.sandbox.cleanup` → `commands/speckit.sandbox.cleanup.md`
   Match the schema and indentation of the existing `speckit.orchestrate` entry.
-- [ ] T004 [P] Update `.specify/extensions/orchestrate/install.sh` so the "Sync Skill" block syncs all three commands (the existing `speckit.orchestrate.md` plus the two new `speckit.sandbox.*.md` files) by iterating over a list rather than the current single-file `cp`. Sync target paths are `.claude/skills/speckit-sandbox-prepare/SKILL.md` and `.claude/skills/speckit-sandbox-cleanup/SKILL.md`. Missing-source warnings must continue to be non-fatal so install remains idempotent during partial check-ins.
-- [ ] T005 Create `.specify/extensions/orchestrate/assets/sandbox-backlog.md` containing the exact byte content specified by `specs/003-sandbox-testing/contracts/sample-backlog.template.md` (trailing newline, LF endings, no BOM). After writing, verify `sha256sum` produces a stable hash that the integration test can pin.
-- [ ] T006 [P] **(HOISTED from US2 — resolves O1)** Create `.specify/extensions/orchestrate/scripts/sh/sandbox-cleanup.sh` (POSIX `sh`, `set -u`). Logic:
+- [X] T004 [P] Update `.specify/extensions/orchestrate/install.sh` so the "Sync Skill" block syncs all three commands (the existing `speckit.orchestrate.md` plus the two new `speckit.sandbox.*.md` files) by iterating over a list rather than the current single-file `cp`. Sync target paths are `.claude/skills/speckit-sandbox-prepare/SKILL.md` and `.claude/skills/speckit-sandbox-cleanup/SKILL.md`. Missing-source warnings must continue to be non-fatal so install remains idempotent during partial check-ins.
+- [X] T005 Create `.specify/extensions/orchestrate/assets/sandbox-backlog.md` containing the exact byte content specified by `specs/003-sandbox-testing/contracts/sample-backlog.template.md` (trailing newline, LF endings, no BOM). After writing, verify `sha256sum` produces a stable hash that the integration test can pin.
+- [X] T006 [P] **(HOISTED from US2 — resolves O1)** Create `.specify/extensions/orchestrate/scripts/sh/sandbox-cleanup.sh` (POSIX `sh`, `set -u`). Logic:
   1. `REPO_ROOT="$(git rev-parse --show-toplevel)" || err "not inside a git working tree"`.
   2. `SANDBOX="$REPO_ROOT/.sandbox"`.
   3. If `! -e "$SANDBOX"`, print `sandbox: nothing to clean.` and `exit 0` (FR-015).
@@ -77,15 +77,15 @@ This is a Spec Kit **extension** increment — no `src/`. New files live under:
 
 > **Write these tests FIRST and confirm they fail before implementing T012.**
 
-- [ ] T007 [P] [US1] Author bats fixture helper `tests/extensions/orchestrate/unit/helpers/sandbox-fixture.sh` that builds a throwaway host repo via `mktemp -d`, copies the orchestrator's `.specify/` and `.claude/` into it, and yields its path. Reused by all sandbox-related tests.
-- [ ] T008 [US1] Create `tests/extensions/orchestrate/unit/sandbox-prepare.bats` with a "happy path" test case: in a throwaway host, run `sandbox-prepare.sh`, assert `.sandbox/.git` exists, `.sandbox/BACKLOG.md` is byte-equal to the asset, `.sandbox/.specify/extensions/orchestrate/extension.yml` exists, host `.gitignore` contains `.sandbox/`, and the sandbox `git log -1 --format=%s` equals `chore(sandbox): initial sandbox state`.
-- [ ] T009 [US1] Add a "missing dependency" test case to `tests/extensions/orchestrate/unit/sandbox-prepare.bats`: stub `PATH` to hide `git` (and separately to hide `jq`), run `sandbox-prepare.sh`, assert non-zero exit, the missing tool name in stderr, and that `.sandbox/` was NOT created (FR-017).
-- [ ] T010 [US1] **(NEW — resolves C3)** Add a "dirty host invariant" test case to `tests/extensions/orchestrate/unit/sandbox-prepare.bats`: in the fixture host, dirty the working tree by writing a tracked file (e.g., `HOST_DIRTY_SENTINEL.tmp`), capture `git status --porcelain` and a SHA-256 of every host file outside `.sandbox/`, run `sandbox-prepare.sh`, assert exit 0, assert `.sandbox/` was created, and assert `git status --porcelain` plus the host-file SHA-256 set are unchanged (FR-018). This locks the "host MUST NOT be inspected, modified, staged, committed, stashed, or restored by prepare" guarantee.
+- [X] T007 [P] [US1] Author bats fixture helper `tests/extensions/orchestrate/unit/helpers/sandbox-fixture.sh` that builds a throwaway host repo via `mktemp -d`, copies the orchestrator's `.specify/` and `.claude/` into it, and yields its path. Reused by all sandbox-related tests.
+- [X] T008 [US1] Create `tests/extensions/orchestrate/unit/sandbox-prepare.bats` with a "happy path" test case: in a throwaway host, run `sandbox-prepare.sh`, assert `.sandbox/.git` exists, `.sandbox/BACKLOG.md` is byte-equal to the asset, `.sandbox/.specify/extensions/orchestrate/extension.yml` exists, host `.gitignore` contains `.sandbox/`, and the sandbox `git log -1 --format=%s` equals `chore(sandbox): initial sandbox state`.
+- [X] T009 [US1] Add a "missing dependency" test case to `tests/extensions/orchestrate/unit/sandbox-prepare.bats`: stub `PATH` to hide `git` (and separately to hide `jq`), run `sandbox-prepare.sh`, assert non-zero exit, the missing tool name in stderr, and that `.sandbox/` was NOT created (FR-017).
+- [X] T010 [US1] **(NEW — resolves C3)** Add a "dirty host invariant" test case to `tests/extensions/orchestrate/unit/sandbox-prepare.bats`: in the fixture host, dirty the working tree by writing a tracked file (e.g., `HOST_DIRTY_SENTINEL.tmp`), capture `git status --porcelain` and a SHA-256 of every host file outside `.sandbox/`, run `sandbox-prepare.sh`, assert exit 0, assert `.sandbox/` was created, and assert `git status --porcelain` plus the host-file SHA-256 set are unchanged (FR-018). This locks the "host MUST NOT be inspected, modified, staged, committed, stashed, or restored by prepare" guarantee.
 
 ### Implementation for User Story 1
 
-- [ ] T011 [P] [US1] Create `.specify/extensions/orchestrate/commands/speckit.sandbox.prepare.md` as the source for the `/speckit-sandbox-prepare` skill. Header (YAML frontmatter) declares the skill name; body instructs Claude Code to invoke `.specify/extensions/orchestrate/scripts/sh/sandbox-prepare.sh` via the Bash tool and surface its stdout/stderr to the user. Mirror the structure of the existing `commands/speckit.orchestrate.md`.
-- [ ] T012 [US1] Create `.specify/extensions/orchestrate/scripts/sh/sandbox-prepare.sh` (POSIX `sh`, `set -u`, no Bashisms). Logic in order:
+- [X] T011 [P] [US1] Create `.specify/extensions/orchestrate/commands/speckit.sandbox.prepare.md` as the source for the `/speckit-sandbox-prepare` skill. Header (YAML frontmatter) declares the skill name; body instructs Claude Code to invoke `.specify/extensions/orchestrate/scripts/sh/sandbox-prepare.sh` via the Bash tool and surface its stdout/stderr to the user. Mirror the structure of the existing `commands/speckit.orchestrate.md`.
+- [X] T012 [US1] Create `.specify/extensions/orchestrate/scripts/sh/sandbox-prepare.sh` (POSIX `sh`, `set -u`, no Bashisms). Logic in order:
   1. Resolve `REPO_ROOT` via `git rev-parse --show-toplevel` (abort if not in a git tree).
   2. **(resolves C1)** Verify dependencies: `git` (presence + `git worktree --help` confirms worktree support), `jq` (required by the orchestrator that the sandbox will host — fail fast here per FR-017), and `realpath` with `pwd -P` fallback. On any missing dep, print missing name and `exit 1` (FR-017). Do **not** inspect host git tree state (FR-018).
   3. Compute `SANDBOX="$REPO_ROOT/.sandbox"` and `LOCK="$SANDBOX/.specify/extensions/orchestrate/lock"`.
@@ -109,7 +109,7 @@ This is a Spec Kit **extension** increment — no `src/`. New files live under:
   14. `git add -A`, then commit with `-c user.email=sandbox@local -c user.name=Sandbox` and message `chore(sandbox): initial sandbox state` (Principle V).
   15. `git checkout -b dev --quiet && git checkout main --quiet` (FR-009, dev branch present but HEAD on main).
   16. `printf 'sandbox: prepared at %s\n' "$SANDBOX"` (FR-003).
-- [ ] T013 [US1] Verify tests in `tests/extensions/orchestrate/unit/sandbox-prepare.bats` (T008, T009, T010) pass against the implemented `.specify/extensions/orchestrate/scripts/sh/sandbox-prepare.sh`. Confirm before moving to US2.
+- [X] T013 [US1] Verify tests in `tests/extensions/orchestrate/unit/sandbox-prepare.bats` (T008, T009, T010) pass against the implemented `.specify/extensions/orchestrate/scripts/sh/sandbox-prepare.sh`. Confirm before moving to US2.
 
 **Checkpoint**: `/speckit-sandbox-prepare` works end-to-end, including the dirty-host invariant. The MVP slice for prepare ships.
 
@@ -127,16 +127,16 @@ This is a Spec Kit **extension** increment — no `src/`. New files live under:
 
 > **Write these tests FIRST and confirm they fail or pass deterministically against the T006 helper.**
 
-- [ ] T014 [P] [US2] Create `tests/extensions/orchestrate/unit/sandbox-cleanup.bats` with a "happy path" test: in a throwaway host that has a prepared sandbox, run `sandbox-cleanup.sh`, assert `.sandbox/` is gone and the rest of the host tree is byte-identical to its pre-prepare snapshot (compute via `find <host> -path '*/.sandbox' -prune -o -type f -print | xargs sha256sum`).
-- [ ] T015 [US2] Add a "no-op when absent" test to `tests/extensions/orchestrate/unit/sandbox-cleanup.bats`: in a throwaway host with no `.sandbox/`, run `sandbox-cleanup.sh`, assert exit 0 and stdout contains `nothing to clean` (FR-015).
-- [ ] T016 [US2] Add a "path-safety" test to `tests/extensions/orchestrate/unit/sandbox-cleanup.bats`: in a throwaway host, create `.sandbox` as a symlink to a separate `mktemp -d` decoy directory; run `sandbox-cleanup.sh`, assert non-zero exit, stderr names the resolved decoy path, and the decoy is **not** deleted (FR-007, SC-005). Repeat with a `.sandbox` regular dir whose `realpath` differs from `<repo-root>/.sandbox` (e.g., if `<repo-root>` itself is a symlink).
-- [ ] T017 [US2] Add a "cleanup ignores lock" test to `tests/extensions/orchestrate/unit/sandbox-cleanup.bats`: in a throwaway host with a prepared sandbox, manually `touch .sandbox/.specify/extensions/orchestrate/lock`, run `sandbox-cleanup.sh`, assert exit 0 and `.sandbox/` is gone (FR-016 — cleanup is the escape hatch).
+- [X] T014 [P] [US2] Create `tests/extensions/orchestrate/unit/sandbox-cleanup.bats` with a "happy path" test: in a throwaway host that has a prepared sandbox, run `sandbox-cleanup.sh`, assert `.sandbox/` is gone and the rest of the host tree is byte-identical to its pre-prepare snapshot (compute via `find <host> -path '*/.sandbox' -prune -o -type f -print | xargs sha256sum`).
+- [X] T015 [US2] Add a "no-op when absent" test to `tests/extensions/orchestrate/unit/sandbox-cleanup.bats`: in a throwaway host with no `.sandbox/`, run `sandbox-cleanup.sh`, assert exit 0 and stdout contains `nothing to clean` (FR-015).
+- [X] T016 [US2] Add a "path-safety" test to `tests/extensions/orchestrate/unit/sandbox-cleanup.bats`: in a throwaway host, create `.sandbox` as a symlink to a separate `mktemp -d` decoy directory; run `sandbox-cleanup.sh`, assert non-zero exit, stderr names the resolved decoy path, and the decoy is **not** deleted (FR-007, SC-005). Repeat with a `.sandbox` regular dir whose `realpath` differs from `<repo-root>/.sandbox` (e.g., if `<repo-root>` itself is a symlink).
+- [X] T017 [US2] Add a "cleanup ignores lock" test to `tests/extensions/orchestrate/unit/sandbox-cleanup.bats`: in a throwaway host with a prepared sandbox, manually `touch .sandbox/.specify/extensions/orchestrate/lock`, run `sandbox-cleanup.sh`, assert exit 0 and `.sandbox/` is gone (FR-016 — cleanup is the escape hatch).
 
 ### Implementation for User Story 2
 
-- [ ] T018 [P] [US2] Create `.specify/extensions/orchestrate/commands/speckit.sandbox.cleanup.md` as the source for the `/speckit-sandbox-cleanup` skill. Same shape as T011: frontmatter + body invoking the helper via Bash.
-- [ ] T019 [US2] Verify tests in `tests/extensions/orchestrate/unit/sandbox-cleanup.bats` (T014–T017) pass against `.specify/extensions/orchestrate/scripts/sh/sandbox-cleanup.sh` (implemented in T006). Confirm before moving to US3.
-- [ ] T020 [US2] Verify in `.specify/extensions/orchestrate/scripts/sh/sandbox-prepare.sh` that the re-prepare path (T012 step 5) invokes `sandbox-cleanup.sh` rather than `rm -rf`-ing the sandbox directly, so the path-safety check always runs.
+- [X] T018 [P] [US2] Create `.specify/extensions/orchestrate/commands/speckit.sandbox.cleanup.md` as the source for the `/speckit-sandbox-cleanup` skill. Same shape as T011: frontmatter + body invoking the helper via Bash.
+- [X] T019 [US2] Verify tests in `tests/extensions/orchestrate/unit/sandbox-cleanup.bats` (T014–T017) pass against `.specify/extensions/orchestrate/scripts/sh/sandbox-cleanup.sh` (implemented in T006). Confirm before moving to US3.
+- [X] T020 [US2] Verify in `.specify/extensions/orchestrate/scripts/sh/sandbox-prepare.sh` that the re-prepare path (T012 step 5) invokes `sandbox-cleanup.sh` rather than `rm -rf`-ing the sandbox directly, so the path-safety check always runs.
 
 **Checkpoint**: Both P1 stories shipping. The MVP — prepare + cleanup — is functional and tested. The maintainer can iterate `/speckit-sandbox-prepare` → `/speckit-orchestrate` → `/speckit-sandbox-cleanup` end-to-end.
 
@@ -150,12 +150,12 @@ This is a Spec Kit **extension** increment — no `src/`. New files live under:
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T021 [P] [US3] Create `tests/extensions/orchestrate/integration/sandbox-lifecycle.bats`. Test layout: prepare in a throwaway host → assert every required entry from `contracts/sandbox-layout.md` (the table, including the sandbox-root `.gitignore` from T012 step 11) → assert byte-equality of `.sandbox/BACKLOG.md` with the asset (via `sha256sum`) → invoke `parse-backlog.sh` against the sandbox backlog → assert it returns 2 actionable items and 1 skipped item with the expected canonical titles → cleanup → assert host tree identical to pre-prepare snapshot.
-- [ ] T022 [US3] Add a "byte-stability" sub-test to `tests/extensions/orchestrate/integration/sandbox-lifecycle.bats`: run prepare twice (with cleanup in between if needed) on the same host, assert the resulting `.sandbox/BACKLOG.md` SHA-256 is identical across runs (SC-003).
+- [X] T021 [P] [US3] Create `tests/extensions/orchestrate/integration/sandbox-lifecycle.bats`. Test layout: prepare in a throwaway host → assert every required entry from `contracts/sandbox-layout.md` (the table, including the sandbox-root `.gitignore` from T012 step 11) → assert byte-equality of `.sandbox/BACKLOG.md` with the asset (via `sha256sum`) → invoke `parse-backlog.sh` against the sandbox backlog → assert it returns 2 actionable items and 1 skipped item with the expected canonical titles → cleanup → assert host tree identical to pre-prepare snapshot.
+- [X] T022 [US3] Add a "byte-stability" sub-test to `tests/extensions/orchestrate/integration/sandbox-lifecycle.bats`: run prepare twice (with cleanup in between if needed) on the same host, assert the resulting `.sandbox/BACKLOG.md` SHA-256 is identical across runs (SC-003).
 
 ### Implementation for User Story 3
 
-- [ ] T023 [US3] Verify `tests/extensions/orchestrate/integration/sandbox-lifecycle.bats` (T021 + T022) passes against the asset at `.specify/extensions/orchestrate/assets/sandbox-backlog.md`. No production code change expected — if it fails because `.specify/extensions/orchestrate/scripts/sh/parse-backlog.sh` (from feature `001`) doesn't return the expected 2 + 1 split, escalate as a feature `001` bug rather than patching here.
+- [X] T023 [US3] Verify `tests/extensions/orchestrate/integration/sandbox-lifecycle.bats` (T021 + T022) passes against the asset at `.specify/extensions/orchestrate/assets/sandbox-backlog.md`. No production code change expected — if it fails because `.specify/extensions/orchestrate/scripts/sh/parse-backlog.sh` (from feature `001`) doesn't return the expected 2 + 1 split, escalate as a feature `001` bug rather than patching here.
 
 **Checkpoint**: The sample backlog is provably correct and stable across runs.
 
@@ -169,12 +169,12 @@ This is a Spec Kit **extension** increment — no `src/`. New files live under:
 
 ### Tests for User Story 4 ⚠️
 
-- [ ] T024 [US4] Add a "re-prepare wipes existing sandbox" test to `tests/extensions/orchestrate/unit/sandbox-prepare.bats`: prepare; touch a sentinel file inside `.sandbox/` (e.g., `.sandbox/SENTINEL`); prepare again; assert exit 0, the sentinel is gone, and stdout contains a notice that the previous sandbox was discarded (FR-013, US4 AS1).
-- [ ] T025 [US4] Add a "re-prepare refuses on active lock" test to `tests/extensions/orchestrate/unit/sandbox-prepare.bats`: prepare; `touch .sandbox/.specify/extensions/orchestrate/lock`; prepare again; assert non-zero exit (code 2 per T012 step 4), stderr names the lock path, and `.sandbox/` is **untouched** — the sentinel file from T024's setup must still be present after the refused prepare (FR-014, US4 AS2).
+- [X] T024 [US4] Add a "re-prepare wipes existing sandbox" test to `tests/extensions/orchestrate/unit/sandbox-prepare.bats`: prepare; touch a sentinel file inside `.sandbox/` (e.g., `.sandbox/SENTINEL`); prepare again; assert exit 0, the sentinel is gone, and stdout contains a notice that the previous sandbox was discarded (FR-013, US4 AS1).
+- [X] T025 [US4] Add a "re-prepare refuses on active lock" test to `tests/extensions/orchestrate/unit/sandbox-prepare.bats`: prepare; `touch .sandbox/.specify/extensions/orchestrate/lock`; prepare again; assert non-zero exit (code 2 per T012 step 4), stderr names the lock path, and `.sandbox/` is **untouched** — the sentinel file from T024's setup must still be present after the refused prepare (FR-014, US4 AS2).
 
 ### Implementation for User Story 4
 
-- [ ] T026 [US4] Verify tests T024 and T025 in `tests/extensions/orchestrate/unit/sandbox-prepare.bats` pass against the existing `.specify/extensions/orchestrate/scripts/sh/sandbox-prepare.sh`. If either fails, fix the existing helper rather than adding new code paths.
+- [X] T026 [US4] Verify tests T024 and T025 in `tests/extensions/orchestrate/unit/sandbox-prepare.bats` pass against the existing `.specify/extensions/orchestrate/scripts/sh/sandbox-prepare.sh`. If either fails, fix the existing helper rather than adding new code paths.
 
 **Checkpoint**: All four user stories are tested and shipping. The debug loop is durable.
 
@@ -184,10 +184,10 @@ This is a Spec Kit **extension** increment — no `src/`. New files live under:
 
 **Purpose**: Documentation, manual smoke test, and a final constitution check after the implementation lands.
 
-- [ ] T027 [P] Update `.specify/extensions/orchestrate/README.md` to mention `/speckit-sandbox-prepare` and `/speckit-sandbox-cleanup` and link to `specs/003-sandbox-testing/quickstart.md`. Keep the addition to one paragraph plus the two skill references; do not rewrite the README.
-- [ ] T028 [P] Re-run the Constitution Check from `specs/003-sandbox-testing/plan.md` against the landed implementation. Confirm all five gates still PASS (no new subagents, no new JSON payloads, no new YAML config, all helpers POSIX `sh`, initial sandbox commit is Conventional Commits). Record the result in a one-paragraph note appended to `plan.md`'s Constitution Check section (or leave as-is if already accurate).
+- [X] T027 [P] Update `.specify/extensions/orchestrate/README.md` to mention `/speckit-sandbox-prepare` and `/speckit-sandbox-cleanup` and link to `specs/003-sandbox-testing/quickstart.md`. Keep the addition to one paragraph plus the two skill references; do not rewrite the README.
+- [X] T028 [P] Re-run the Constitution Check from `specs/003-sandbox-testing/plan.md` against the landed implementation. Confirm all five gates still PASS (no new subagents, no new JSON payloads, no new YAML config, all helpers POSIX `sh`, initial sandbox commit is Conventional Commits). Record the result in a one-paragraph note appended to `plan.md`'s Constitution Check section (or leave as-is if already accurate).
 - [ ] T029 Manually walk through `specs/003-sandbox-testing/quickstart.md` from a clean checkout: run `/speckit-sandbox-prepare`, `cd .sandbox/`, run `/speckit-orchestrate`, observe at least one feature complete + one feature block on clarification, exit, run `/speckit-sandbox-cleanup`. This is the SC-001 + SC-004 + SC-006 smoke test and cannot be automated (requires real Claude Code subagents).
-- [ ] T030 [P] Verify that running `.specify/extensions/orchestrate/install.sh` in the orchestrator project itself (host) is still idempotent after T004 — re-running it should sync all three skills without error and without overwriting unmodified files.
+- [X] T030 [P] Verify that running `.specify/extensions/orchestrate/install.sh` in the orchestrator project itself (host) is still idempotent after T004 — re-running it should sync all three skills without error and without overwriting unmodified files.
 
 ---
 

@@ -9,6 +9,10 @@ A Spec Kit extension that drives an entire `BACKLOG.md` through the full Spec Ki
 - **Schemas**: `schemas/` (versioned JSON Schemas for state and agent payloads)
 - **Helpers**: `scripts/sh/*.sh` (POSIX `sh` only — see project constitution Principle V)
 
+## Debugging the orchestrator end-to-end
+
+`/speckit-sandbox-prepare` builds a disposable test environment at `.sandbox/` inside the host repo — a fresh git repo with this extension installed, a curated 3-item `BACKLOG.md`, and a `dev` branch — ready to accept `/speckit-orchestrate` without polluting your working tree. `/speckit-sandbox-cleanup` wipes the sandbox completely. See [`/specs/003-sandbox-testing/quickstart.md`](../../../specs/003-sandbox-testing/quickstart.md) for the full debug loop.
+
 ## Quick install
 
 ```sh
