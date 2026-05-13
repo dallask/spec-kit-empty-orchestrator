@@ -55,6 +55,12 @@ _short_name="$(printf '%s' "$ORIGINAL_TITLE" \
 _combined_description="$ORIGINAL_TITLE"
 [ -n "$DESCRIPTION" ] && _combined_description="$ORIGINAL_TITLE — $DESCRIPTION"
 
+# Remember the current branch so we can restore it after allocation.
+# create-new-feature.sh uses `git checkout -b` which switches the HEAD; if we
+# leave it on the newly-created branch, a subsequent `git worktree add` for
+# that same branch will fail ("already used by worktree at …").
+_orig_branch="$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)"
+
 # Run the existing helper under the lock. It outputs JSON on its last line.
 allocate_under_lock() {
     "$SPECKIT_GIT_FEATURE" --json --short-name "$_short_name" "$_combined_description" \
@@ -63,6 +69,9 @@ allocate_under_lock() {
 }
 
 _raw="$(with_state_lock allocate_under_lock)"
+
+# Restore HEAD to the branch we were on before the helper switched it.
+git -C "$REPO_ROOT" checkout -q "$_orig_branch" 2>/dev/null || true
 [ -n "$_raw" ] || die "allocate-feature: speckit.git.feature returned no JSON"
 
 # Validate.
