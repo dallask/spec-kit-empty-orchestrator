@@ -5,6 +5,14 @@
 **Status**: Draft
 **Input**: User description: "Sandbox testing feature that allows create fully functional test environment in a separate sandbox folder to go through all agentic flow that extension implements to debug existing functionality. Feature should include command to prepare and clean up sandbox."
 
+## Clarifications
+
+### Session 2026-05-13
+
+- Q: Where exactly does the sandbox directory live on disk? → A: `.sandbox/` inside the host repository root, added to the host's `.gitignore` by prepare. Cleanup operates exclusively on this fixed relative path.
+- Q: What scenarios must the sample `BACKLOG.md` cover? → A: Three items — one happy-path (completes without prompts), one clarification-needed (intentionally vague to trigger `/speckit-clarify` or `/speckit-analyze`), and one already-complete `- [x]` item to exercise the orchestrator's skip behavior. Failure-injection (Dev or merge) is out of scope for v1 because it is brittle to engineer deterministically.
+- Q: How should the prepare and cleanup commands be exposed? → A: Two distinct slash skills, `/speckit-sandbox-prepare` and `/speckit-sandbox-cleanup`. Matches the existing one-verb-per-skill convention used by `/speckit-orchestrate`, `/speckit-git-feature`, etc.; each skill appears separately in the skill list and has its own SKILL.md.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Prepare a self-contained sandbox in one command (Priority: P1)
@@ -13,7 +21,7 @@ A maintainer working on the Backlog Orchestrator Extension wants a disposable, f
 
 **Why this priority**: This is the core value proposition. Without a one-shot prepare command, every debug session starts with a 10-minute manual setup ritual — initializing git, installing the extension, writing a backlog, creating the dev branch, etc. — which discourages testing and leaves bugs unreproduced. This is the smallest slice that delivers value.
 
-**Independent Test**: From a clean checkout of the orchestrator project, run the sandbox prepare command and verify that the resulting sandbox directory contains a working git repository with the orchestrator extension installed, a sample `BACKLOG.md`, a `dev` branch, and that running `/speckit-orchestrate` inside the sandbox starts the Lead without setup errors.
+**Independent Test**: From a clean checkout of the orchestrator project, run `/speckit-sandbox-prepare` and verify that the resulting `.sandbox/` directory contains a working git repository with the orchestrator extension installed, a sample `BACKLOG.md`, a `dev` branch, and that running `/speckit-orchestrate` inside the sandbox starts the Lead without setup errors.
 
 **Acceptance Scenarios**:
 
@@ -29,7 +37,7 @@ After a debug session the maintainer wants to wipe every trace of the sandbox �
 
 **Why this priority**: Without a deterministic cleanup, sandbox debris (stale worktrees, orphan branches, leftover state JSON) accumulates across runs and corrupts later debug sessions — the very problem the sandbox is supposed to avoid. Cleanup is the other half of the prepare/use/cleanup lifecycle.
 
-**Independent Test**: After a sandbox run that has produced worktrees, branches, and a populated `state.json`, run the cleanup command and verify the sandbox directory no longer exists, the host repository's working tree is unchanged (`git status` on the host is identical to before prepare ran), and re-running cleanup is a clean no-op.
+**Independent Test**: After a sandbox run that has produced worktrees, branches, and a populated `state.json`, run `/speckit-sandbox-cleanup` and verify the `.sandbox/` directory no longer exists, the host repository's working tree is unchanged (`git status` on the host is identical to before `/speckit-sandbox-prepare` ran), and re-running `/speckit-sandbox-cleanup` is a clean no-op.
 
 **Acceptance Scenarios**:
 
@@ -49,8 +57,8 @@ The maintainer wants the sandbox's sample `BACKLOG.md` to exercise the pipeline'
 
 **Acceptance Scenarios**:
 
-1. **Given** a freshly prepared sandbox, **When** the sample `BACKLOG.md` is parsed, **Then** it contains at least one item designed to complete cleanly and at least one item designed to trigger a clarification request during `/speckit-clarify` or `/speckit-analyze`.
-2. **Given** the sample backlog is executed end-to-end, **When** the orchestrator finishes its run, **Then** the final per-feature summary classifies each sample item under the documented `(phase, status)` model with a status that matches the scenario the item was designed to reproduce.
+1. **Given** a freshly prepared sandbox, **When** the sample `BACKLOG.md` is parsed, **Then** it contains exactly three top-level items: one happy-path `- [ ]`, one deliberately-vague `- [ ]` designed to trigger a clarification during `/speckit-clarify` or `/speckit-analyze`, and one `- [x]` already-complete item.
+2. **Given** the sample backlog is executed end-to-end, **When** the orchestrator finishes its run, **Then** the final per-feature summary classifies the happy-path item as `(phase=done, status=complete)`, the vague item as `(status=blocked)` with the clarification question visible, and the `- [x]` item as skipped (absent from the active feature set or recorded with a "skipped-already-complete" payload).
 
 ---
 
@@ -85,22 +93,26 @@ While iterating on a bug fix, the maintainer wants to call prepare repeatedly an
 
 #### Commands
 
-- **FR-001**: Extension MUST expose a single user-facing command that prepares the sandbox. The command MUST be invokable from the host repository's root without arguments and MUST be discoverable through the same mechanism (slash skill list) as the rest of the orchestrator's commands.
-- **FR-002**: Extension MUST expose a single user-facing command that cleans up the sandbox. The command MUST be invokable from the host repository's root without arguments.
-- **FR-003**: Both commands MUST print a one-line summary of what they did on exit (path created / path removed / nothing to do), so the maintainer never has to inspect the filesystem to know the result.
+- **FR-001**: Extension MUST expose `/speckit-sandbox-prepare` as a distinct slash skill that prepares the sandbox. It MUST be invokable from the host repository's root without arguments and MUST appear in the Claude Code skill list alongside the orchestrator's other skills (`/speckit-orchestrate`, etc.).
+- **FR-002**: Extension MUST expose `/speckit-sandbox-cleanup` as a distinct slash skill that removes the sandbox. It MUST be invokable from the host repository's root without arguments and MUST appear in the Claude Code skill list. The two sandbox skills MUST NOT be folded into a single skill with sub-arguments; each lifecycle action has its own SKILL.md so the verb is visible in the skill list.
+- **FR-003**: Both `/speckit-sandbox-prepare` and `/speckit-sandbox-cleanup` MUST print a one-line summary of what they did on exit (path created / path removed / nothing to do), so the maintainer never has to inspect the filesystem to know the result.
 
 #### Sandbox location and isolation
 
-- **FR-004**: Sandbox MUST live in a single, well-known location relative to the host repository, documented in the orchestrator quickstart, so the maintainer always knows where to look and so cleanup has an unambiguous target.
-- **FR-005**: Sandbox location MUST be excluded from the host repository's git tracking so sandbox files never appear in `git status`, never get accidentally committed, and never appear in diffs against the host repo.
+- **FR-004**: Sandbox MUST live at the fixed path `.sandbox/` relative to the host repository root. No configuration, environment variable, or argument overrides this location in v1; the path is hardcoded so cleanup's deletion target is unambiguous.
+- **FR-005**: Prepare MUST ensure the host repository's `.gitignore` contains an entry that excludes `.sandbox/` from git tracking. If `.gitignore` does not exist, prepare creates it; if it already excludes `.sandbox/` (directly or via a broader rule), prepare leaves it untouched.
 - **FR-006**: Sandbox MUST be a fully-initialised git repository in its own right (not a subdirectory of the host's git tree, not a worktree of the host) so that the orchestrator inside the sandbox can create its own worktrees and branches against an independent git history.
-- **FR-007**: Cleanup MUST NOT be able to operate on any path outside the documented sandbox location; an attempt to do so (via configuration override, environment variable, or any other mechanism) MUST be refused with the offending path printed.
+- **FR-007**: Cleanup MUST verify its deletion target resolves to `<host-repo-root>/.sandbox/` and refuse to delete anything else. Even if invoked with a manipulated working directory, symlink target, or future configuration override, cleanup MUST exit non-zero and print the offending path rather than delete it.
 
 #### Sandbox contents
 
 - **FR-008**: Prepare MUST install the orchestrator extension into the sandbox using the same installation entry point that real end-users invoke, so installation regressions are caught by sandbox runs.
 - **FR-009**: Prepare MUST create the orchestrator's configured default target branch (named per the orchestrator's `merge.target_branch` default) inside the sandbox before the maintainer runs `/speckit-orchestrate`, so the merge step does not fail on missing target.
-- **FR-010**: Prepare MUST place a sample `BACKLOG.md` at the sandbox root containing at least one item that is designed to flow through the pipeline without prompts and at least one item that is designed to require a human clarification answer during `/speckit-clarify` or `/speckit-analyze`.
+- **FR-010**: Prepare MUST place a sample `BACKLOG.md` at the sandbox root containing exactly three top-level checkbox items, in this order:
+  1. A `- [ ]` happy-path item with a description specific enough that the BA pipeline completes without surfacing a clarification request.
+  2. A `- [ ]` clarification-needed item with a description deliberately vague on a scope-significant detail so that `/speckit-clarify` or `/speckit-analyze` raises a question and the feature pauses in `(status=blocked)`.
+  3. A `- [x]` already-complete item that the orchestrator MUST skip per its `FR-003a` skip-on-checked behavior; presence of this item in the parsed-but-skipped state is observable in the orchestrator's state file.
+  Failure-injection items (Dev-failure, merge-conflict) are explicitly out of scope for v1 because they are brittle to engineer deterministically.
 - **FR-011**: Prepare MUST NOT pre-run `/speckit-orchestrate`; it produces a ready-to-run sandbox and stops. The maintainer is the one who starts the Lead.
 - **FR-012**: Prepare MUST commit the initial sandbox state (extension installation, sample backlog, dev branch creation) so that the orchestrator's `safety.on_dirty_tree` default of `refuse` does not block the first `/speckit-orchestrate` invocation.
 
@@ -123,7 +135,7 @@ While iterating on a bug fix, the maintainer wants to call prepare repeatedly an
 
 ### Key Entities *(include if feature involves data)*
 
-- **Sandbox**: A self-contained, disposable test environment produced by the prepare command. Consists of an isolated git repository at the documented sandbox path, the orchestrator extension installed, a sample `BACKLOG.md`, and a configured dev branch. Owned and entirely controlled by the prepare/cleanup commands; the maintainer interacts with the sandbox only by running orchestrator commands inside it.
+- **Sandbox**: A self-contained, disposable test environment produced by `/speckit-sandbox-prepare`. Consists of an isolated git repository at `.sandbox/` inside the host repo, the orchestrator extension installed, a sample `BACKLOG.md`, and a configured dev branch. Owned and entirely controlled by `/speckit-sandbox-prepare` and `/speckit-sandbox-cleanup`; the maintainer interacts with the sandbox only by running orchestrator commands inside it.
 - **Sample Backlog**: The `BACKLOG.md` file placed inside the sandbox by prepare. Designed to cover happy-path and clarification scenarios within a single run.
 - **Sandbox Lock**: A signal (presence of an active orchestrator state lock file inside the sandbox) that an orchestrator Lead is currently running against the sandbox. Read-only to the sandbox commands; consulted by prepare to decide whether re-prepare is safe.
 
@@ -131,23 +143,23 @@ While iterating on a bug fix, the maintainer wants to call prepare repeatedly an
 
 ### Measurable Outcomes
 
-- **SC-001**: A maintainer with a clean checkout of the orchestrator project can go from "no sandbox" to a running `/speckit-orchestrate` session against the sample backlog using at most two commands (prepare, then orchestrate) and zero manual filesystem edits.
+- **SC-001**: A maintainer with a clean checkout of the orchestrator project can go from "no sandbox" to a running `/speckit-orchestrate` session against the sample backlog using exactly two slash commands (`/speckit-sandbox-prepare`, then `/speckit-orchestrate` inside the sandbox) and zero manual filesystem edits.
 - **SC-002**: After running cleanup, comparing the host repository before prepare to after cleanup shows zero new tracked files, zero modified tracked files, zero new ignored files outside the sandbox path, and zero new git branches in the host repository.
 - **SC-003**: Re-running prepare on an existing sandbox always reaches an identical post-prepare state — same files present, same sample `BACKLOG.md` contents, same dev branch — regardless of what the previous sandbox contained.
-- **SC-004**: A single end-to-end run of `/speckit-orchestrate` inside the freshly prepared sandbox visits at least one feature in every phase the orchestrator implements (BA, Dev, merge) and produces at least one feature in `(phase=done, status=complete)` and at least one feature in `(status=blocked)` awaiting clarification, observable in the orchestrator's `state.json` and final summary.
+- **SC-004**: A single end-to-end run of `/speckit-orchestrate` inside the freshly prepared sandbox visits at least one feature in every phase the orchestrator implements (BA, Dev, merge) and produces exactly: one feature in `(phase=done, status=complete)` (the happy-path item), one feature in `(status=blocked)` awaiting clarification (the vague item), and one item not processed at all because it was marked `- [x]` in the sample backlog. All three outcomes are observable in the orchestrator's `state.json` and final summary.
 - **SC-005**: Cleanup never deletes any file or directory outside the documented sandbox path, even when invoked with deliberately mis-set configuration; an automated audit comparing host-tree filesystem snapshots before prepare and after cleanup reports a non-sandbox delta of exactly zero entries.
 - **SC-006**: 100% of orchestrator commands a real user can invoke (`/speckit-orchestrate`, `/speckit-orchestrate --retry-failed`) are runnable inside a freshly prepared sandbox without additional setup.
 
 ## Assumptions
 
 - **Audience is the extension maintainer, not the end-user**: This feature exists to debug the orchestrator itself. The sandbox commands are not part of the orchestrator's user-facing surface; they are developer tooling shipped alongside the extension's source tree.
-- **Sandbox path is fixed at a sensible default**: The sandbox lives at a single documented path relative to the host repository (e.g., a top-level gitignored directory inside the host checkout). Maintainers who need a non-default location are out of scope for v1; that flexibility, if needed, is a later refinement.
+- **Sandbox path is fixed**: The sandbox lives at the hardcoded path `.sandbox/` inside the host repository root, added to the host's `.gitignore` by prepare. There is no configuration knob, environment variable, or CLI flag for the path in v1; making the location fixed is what makes cleanup's deletion target trivially safe to verify.
 - **Real agentic flow, no mocks**: The sandbox runs the same Claude Code subagents, the same Spec Kit commands, and the same hook scripts that real users run. Mocks would defeat the purpose (debugging the *real* functionality), so the sandbox does not simulate the agentic loop.
 - **Sample backlog is small but representative**: The sample `BACKLOG.md` contains a handful of items chosen to exercise the orchestrator's important paths in one short run. It is not a comprehensive test corpus and does not aim to replace dedicated test suites.
 - **One sandbox at a time**: A single sandbox per host repository is supported. Concurrent sandboxes (parallel debug sessions on the same host checkout) are out of scope for v1.
 - **Cleanup is destructive**: Cleanup removes the sandbox without quarantine, backup, or undo. Maintainers who want to preserve a sandbox for post-mortem inspection must copy the directory aside themselves before running cleanup.
 - **Dependencies are the user's responsibility**: Prepare verifies and reports missing dependencies but does not attempt to install them. Maintainers install `git`, `jq`, and other prerequisites themselves per the orchestrator's quickstart guide.
-- **Sandbox commands live with the orchestrator extension**: The prepare and cleanup commands are part of the orchestrator extension's deliverables (alongside `/speckit-orchestrate`), not a separate extension. They share the extension's directory layout, version, and configuration conventions.
+- **Sandbox commands live with the orchestrator extension**: `/speckit-sandbox-prepare` and `/speckit-sandbox-cleanup` are part of the orchestrator extension's deliverables (alongside `/speckit-orchestrate`), not a separate extension. They share the extension's directory layout, version, and configuration conventions; each gets its own `SKILL.md` so the skill list shows the verb directly.
 
 ## Dependencies
 
