@@ -22,6 +22,12 @@ provides:
     - name: speckit.orchestrate
       file: commands/speckit.orchestrate.md
       description: "Drive every BACKLOG.md item through specify→implement using hub-and-spoke BA/Dev subagents."
+    - name: speckit.sandbox.prepare
+      file: commands/speckit.sandbox.prepare.md
+      description: "Create a disposable test environment at .sandbox/ for debugging the orchestrator end-to-end."
+    - name: speckit.sandbox.cleanup
+      file: commands/speckit.sandbox.cleanup.md
+      description: "Remove the .sandbox/ test environment created by speckit.sandbox.prepare."
 
   agents:
     - name: orchestrate-ba

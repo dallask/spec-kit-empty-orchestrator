@@ -17,8 +17,7 @@ jq_required
 _path="$(orchestrate_state_path)"
 _run_id="${ORCHESTRATE_RUN_ID:-orchestrate-$(iso_now)}"
 
-if [ ! -r "$_path" ]; then
-    # Emit empty initial state. Contains everything required by the schema.
+_emit_initial_state() {
     jq -n --arg now "$(iso_now)" --arg runid "$_run_id" '
         {
             schema_version: "1.0",
@@ -31,11 +30,22 @@ if [ ! -r "$_path" ]; then
             events_log_path: "events.log"
         }
     '
+}
+
+# Missing OR zero-byte → emit initial state.
+if [ ! -r "$_path" ] || [ ! -s "$_path" ]; then
+    _emit_initial_state
     exit 0
 fi
 
-# Read and minimally validate (required fields present, features is array).
+# Whitespace-only files are also treated as "no state yet" — they
+# happen in practice when install.sh from older revisions produced an
+# empty file, or when an interrupted write left an empty placeholder.
 _state="$(cat "$_path")"
+if [ -z "$(printf '%s' "$_state" | tr -d '[:space:]')" ]; then
+    _emit_initial_state
+    exit 0
+fi
 if ! printf '%s' "$_state" | jq . >/dev/null 2>&1; then
     die "state-read: $_path is not valid JSON"
 fi

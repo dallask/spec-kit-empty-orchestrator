@@ -36,6 +36,30 @@ teardown() {
     [ "$feat" -eq 0 ]
 }
 
+@test "read on zero-byte state.json falls back to initial state" {
+    # Simulates the post-install state when install.sh from older revisions
+    # (or any future bug) produces a 0-byte placeholder. The reader must
+    # not die on this — it must emit a valid initial document so
+    # downstream consumers (reconcile-state.sh etc.) can proceed.
+    : > "$TMP/state.json"
+    run "$READ"
+    [ "$status" -eq 0 ]
+    sv="$(printf '%s' "$output" | jq -r .schema_version)"
+    feat="$(printf '%s' "$output" | jq '.features | length')"
+    [ "$sv" = "1.0" ]
+    [ "$feat" -eq 0 ]
+}
+
+@test "read on whitespace-only state.json falls back to initial state" {
+    # A single newline byte was the actual symptom captured in the
+    # debug-session.md analysis; reproduce it explicitly.
+    printf '\n' > "$TMP/state.json"
+    run "$READ"
+    [ "$status" -eq 0 ]
+    sv="$(printf '%s' "$output" | jq -r .schema_version)"
+    [ "$sv" = "1.0" ]
+}
+
 @test "round-trip: read → write produces a 0600 state.json" {
     "$READ" | "$WRITE"
     [ -e "$TMP/state.json" ]

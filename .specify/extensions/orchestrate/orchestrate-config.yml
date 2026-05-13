@@ -1,0 +1,46 @@
+# Backlog Orchestrator Extension Configuration
+# Copied to .specify/extensions/orchestrate/orchestrate-config.yml on install.
+# Every key has a documented default. Override only what you need.
+
+backlog:
+  # Path to the backlog file (repo-relative).
+  path: BACKLOG.md
+
+parallelism:
+  # Maximum concurrent BA subagents. 1..16.
+  ba: 2
+  # Maximum concurrent Dev subagents. 1..16.
+  dev: 2
+
+merge:
+  # Branch the Lead integrates completed feature branches into.
+  target_branch: dev
+  # Integration strategy. One of:
+  #   squash : git merge --squash + one Conventional-Commits commit (default)
+  #   merge  : git merge --no-ff producing a merge commit
+  #   rebase : rebase + ff; every commit must already be Conventional-Commits compliant
+  strategy: squash
+
+worktree:
+  # If true (default), failed-feature worktrees are kept for inspection.
+  retain_on_failure: true
+  # If true (default), successful-feature worktrees are pruned after merge.
+  prune_on_success: true
+
+safety:
+  # Behaviour when the main working tree is dirty at startup. One of:
+  #   refuse : abort with a list of dirty paths (default)
+  #   stash  : auto-stash on start, best-effort pop on clean exit
+  #   ignore : proceed regardless (the user has acknowledged the risk)
+  on_dirty_tree: refuse
+
+ba_gate:
+  # BA→Dev gate strictness. One of:
+  #   strict         : 4 BA artifacts on disk + no open clarifications + ba_done payload (default)
+  #   trust          : only the ba_done payload is required
+  #   severity_based : /speckit.analyze report has zero CRITICAL or HIGH findings
+  strictness: strict
+
+limits:
+  # Hard cap on backlog items processed in one run. 1..1000.
+  max_features: 200
