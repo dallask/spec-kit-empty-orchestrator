@@ -7,3 +7,4 @@ CLAUDE.local.md
 .specify/extensions/orchestrate/lock
 .specify/extensions/orchestrate/worktrees/
 .specify/extensions/orchestrate/orchestrate-config.yml.local
+.sandbox/

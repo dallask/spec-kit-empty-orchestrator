@@ -28,13 +28,13 @@ jq_required
 
 STATE_PATH="${1:-$(orchestrate_state_path)}"
 
-# Read backlog from stdin and load state.
+# Read backlog from stdin and load state. Always delegate to state-read.sh
+# (it handles missing files, empty files, whitespace-only files, and
+# performs the schema shape check). Reading the file directly here would
+# bypass validation and crash downstream jq if state.json was empty or
+# corrupted.
 _backlog="$(cat)"
-if [ ! -r "$STATE_PATH" ]; then
-    _state="$("$_dir/state-read.sh")"
-else
-    _state="$(cat "$STATE_PATH")"
-fi
+_state="$("$_dir/state-read.sh")" || die "reconcile-state: state-read.sh failed"
 
 # Reconcile via jq.
 jq --argjson backlog "$_backlog" --arg now "$(iso_now)" '

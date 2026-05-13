@@ -76,12 +76,37 @@ done
 # --- 4. Pre-create runtime files with mode 0600 ---
 mkdir -p "$EXT_ROOT/worktrees" "$EXT_ROOT/schemas"
 
-for _f in "$EXT_ROOT/state.json" "$EXT_ROOT/events.log"; do
-    if [ ! -e "$_f" ]; then
-        (umask 077 && : >"$_f")
-        chmod 0600 "$_f" 2>/dev/null || true
-        say "created runtime file (mode 0600): $_f"
-    fi
-done
+# events.log starts empty — it's an append-only log.
+_events="$EXT_ROOT/events.log"
+if [ ! -e "$_events" ]; then
+    (umask 077 && : >"$_events")
+    chmod 0600 "$_events" 2>/dev/null || true
+    say "created runtime file (mode 0600): $_events"
+fi
+
+# state.json starts with a canonical empty state, not a 0-byte file. A
+# zero-byte file is technically "present" but is not valid JSON, which
+# crashes downstream jq-based readers (reconcile-state.sh etc.) that
+# read the file directly. Writing a valid empty document keeps every
+# read path well-defined from install onward. State-read.sh's own
+# initial-state shape is the single source of truth for the schema.
+_state="$EXT_ROOT/state.json"
+if [ ! -e "$_state" ] || [ ! -s "$_state" ]; then
+    (umask 077 && cat >"$_state" <<'EOF'
+{
+  "schema_version": "1.0",
+  "run_id": "",
+  "created_at": "",
+  "updated_at": "",
+  "config_snapshot": {},
+  "features": [],
+  "counters": {"queued": 0, "running": 0, "blocked": 0, "failed": 0, "complete": 0},
+  "events_log_path": "events.log"
+}
+EOF
+    )
+    chmod 0600 "$_state" 2>/dev/null || true
+    say "created runtime file (mode 0600): $_state"
+fi
 
 say "install complete."
